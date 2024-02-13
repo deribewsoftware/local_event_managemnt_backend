@@ -64,16 +64,12 @@ func Login(ctx *gin.Context) {
 	// lookup the user
 	var user models.User
 
-	database.DB.First(&user, "email==?", body.Email)
-	if user.ID == 0 {
+	if err := database.DB.Where("email=?", body.Email).First(&user).Error; err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"status":  false,
-			"message": "Invalid email",
+			"success": false,
+			"message": "inValid email",
 		})
-		return
-
 	}
-
 	// compare hash password
 
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
@@ -93,7 +89,7 @@ func Login(ctx *gin.Context) {
 
 	// Sign and Get the complete  encoded payload  as String wit secrets
 
-	tokenString, err := token.SignedString(os.Getenv("SECRET"))
+	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -102,9 +98,21 @@ func Login(ctx *gin.Context) {
 		return
 	}
 
+	ctx.SetSameSite(http.SameSiteLaxMode)
+	ctx.SetCookie("Authorization", tokenString, 3600*24*30, "", "", false, true)
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"token":   tokenString,
+	})
+}
+
+// Validate user
+
+func ValidateUser(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "I am Logged in",
 	})
 }
 

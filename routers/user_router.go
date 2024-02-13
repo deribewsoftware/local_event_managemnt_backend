@@ -9,6 +9,7 @@ func UserRouter(router *gin.Engine) {
 	router.POST("/signup", controllers.Signup)
 
 	router.POST("/login", controllers.Login)
+	router.GET("/validate", controllers.ValidateUser)
 	router.GET("/users", controllers.GetAllUsers)
 	router.GET("/user/:id", controllers.GetUser)
 
