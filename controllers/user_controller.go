@@ -110,9 +110,13 @@ func Login(ctx *gin.Context) {
 // Validate user
 
 func ValidateUser(ctx *gin.Context) {
+
+	user, _ := ctx.Get("user")
 	ctx.JSON(http.StatusOK, gin.H{
+
 		"success": true,
 		"message": "I am Logged in",
+		"user":    user,
 	})
 }
 
