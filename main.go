@@ -5,7 +5,7 @@ import (
 	"os"
 
 	database "github.com/deribewsoftware/event_managemnt/Database"
-	"github.com/deribewsoftware/event_managemnt/controllers"
+	"github.com/deribewsoftware/event_managemnt/routers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -22,7 +22,7 @@ func main() {
 	}
 
 	router := gin.Default()
-	router.POST("/signup", controllers.Signup)
+	routers.UserRouter(router)
 	router.GET("/test", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
 			"success": true,
