@@ -2,10 +2,13 @@ package controllers
 
 import (
 	"net/http"
+	"os"
+	"time"
 
 	database "github.com/deribewsoftware/event_managemnt/Database"
 	"github.com/deribewsoftware/event_managemnt/models"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,34 +47,64 @@ func Signup(ctx *gin.Context) {
 
 func Login(ctx *gin.Context) {
 
+	// get e,ail and  password from body
+
 	var body struct {
-		Name     string `json:"name" binding:"required"`
 		Email    string `json:"email" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 
-	ctx.BindJSON(&body)
+	if ctx.Bind(&body) != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"status":  false,
+			"message": "Failed to login",
+		})
+	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
+	// lookup the user
+	var user models.User
+
+	database.DB.First(&user, "email==?", body.Email)
+	if user.ID == 0 {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"status":  false,
+			"message": "Invalid email",
+		})
+		return
+
+	}
+
+	// compare hash password
+
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "password is  not hashable",
+			"status":  false,
+			"message": "Password is mismatch",
 		})
 		return
 	}
-	user := models.User{Name: body.Name, Email: body.Email, Password: string(hash)}
-	result := database.DB.Create(&user)
 
-	if result.Error != nil {
+	// Generate Jwt token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": user.ID,
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+	})
+
+	// Sign and Get the complete  encoded payload  as String wit secrets
+
+	tokenString, err := token.SignedString(os.Getenv("SECRET"))
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "user is not created",
+			"success": false,
+			"message": "Fail to create token",
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{
-		"message": "users successfully created",
-		"user":    user,
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"token":   tokenString,
 	})
 }
 
